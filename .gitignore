@@ -1,0 +1,10 @@
+__pycache__
+
+config.json
+
+maxmind_data.zip
+
+temp_csv/
+
+venv/
+.vscode/

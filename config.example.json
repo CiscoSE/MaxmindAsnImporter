@@ -1,0 +1,63 @@
+{
+    "LAST_VERSION_IMPORTED": "",
+    "MAXMIND_LICENSE_KEY": "",
+    "MAXMIND_VERSION_URL": "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN-CSV&suffix=zip.md5",
+    "MAXMIND_DATASET_URL": "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN-CSV&suffix=zip",
+    "SEARCH_DATA": {
+        "Akamai": [
+            "akamai"
+        ],
+        "Amazon": [
+            "amazon.com"
+        ],
+        "Apple": [
+            "6185",
+            "714"
+        ],
+        "Cisco": [
+            "cisco systems"
+        ],
+        "Dropbox": [
+            "dropbox"
+        ],
+        "EdgeCast": [
+            "14153",
+            "15133"
+        ],
+        "Facebook": [
+            "facebook"
+        ],
+        "Google": [
+            "google"
+        ],
+        "Hulu": [
+            "23286"
+        ],
+        "LinkedIn": [
+            "linkedin"
+        ],
+        "Microsoft": [
+            "microsoft"
+        ],
+        "Netflix": [
+            "netflix"
+        ],
+        "Pandora": [
+            "pandora"
+        ],
+        "Spotify": [
+            "spotify"
+        ],
+        "Twitter": [
+            "twitter"
+        ],
+        "Yahoo": [
+            "yahoo"
+        ]
+    },
+    "SW_ADDRESS": "",
+    "SW_USERNAME": "",
+    "SW_PASSWORD": "",
+    "SW_TENANT_ID": "",
+    "SW_PARENT_TAG": ""
+}
