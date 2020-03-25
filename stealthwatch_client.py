@@ -9,8 +9,8 @@
 # ----------------
 # Author: Alan Nix
 # Property of: Cisco Systems
-# Version: 1.0
-# Release Date: 10/20/2019
+# Version: 1.1
+# Release Date: 03/25/2020
 #
 ############################################################
 
@@ -19,6 +19,7 @@ import json
 import requests
 
 from requests.packages import urllib3
+
 
 class StealthwatchClient:
     """A class to allow easy interaction with Stealthwatch."""
@@ -56,6 +57,8 @@ class StealthwatchClient:
             self.__session.close()
         self.__session = requests.Session()
 
+        access_token = self.get_access_token()
+
         # Set the version
         self.__version = self.get_version()
 
@@ -63,8 +66,6 @@ class StealthwatchClient:
         if self.__version[0] <= 6 and self.__version[1] <= 8:
             print("Stealthwatch must be 6.9 or higher.")
             exit()
-
-        access_token = self.get_access_token()
 
         return access_token
 
@@ -302,24 +303,55 @@ class StealthwatchClient:
         # Set up a version list
         version = []
 
-        # Get the Stealthwatch login page
-        response = self.__session.get("https://{}/smc/login.html".format(self.__smc_address), verify=False)
+        try:
+            # Get the version from the SW API
+            response = self.__session.get("https://{}/cm/monitor/appliances/status".format(self.__smc_address), verify=False)
 
-        # Parse the version number out of the response
-        version_str = str(response.text.split('<div id="loginMessage">')[1]
-                          .replace('<br />', '<br/>')
-                          .replace('<br>', '<br/>')
-                          .split('<br/>')[1]
-                          .split('</div>')[0]
-                          .replace("\n", "")
-                          .replace("\r", "")
-                          .strip()).split('.')
+            # If the request was successful, then proceed, otherwise terminate.
+            if response.status_code == 200:
 
-        # Append all version numbers to the version list
-        for i in version_str:
-            version.append(int(i))
+                # Iterate through all the appliances
+                for appliance in response.json():
 
-        return version
+                    # If we found the referenced SMC
+                    if appliance["applianceType"] == "SMC":
+
+                        # Split the version string
+                        version_str = appliance["version"].split(".")
+
+                        # Convert strings to integers
+                        for i in version_str:
+                            version.append(int(i))
+
+                        return version
+
+        except Exception as err:
+            print("Unable to get Appliance Status from the SMC, falling back to login page parsing...\nError: {}".format(err))
+
+        try:
+            # Get the Stealthwatch login page
+            response = self.__session.get("https://{}/smc/login.html".format(self.__smc_address), verify=False)
+
+            # Parse the version number out of the response
+            version_str = str(response.text.split('<div id="loginMessage">')[1]
+                              .replace('<br />', '<br/>')
+                              .replace('<br>', '<br/>')
+                              .split('<br/>')[1]
+                              .split('</div>')[0]
+                              .replace("\n", "")
+                              .replace("\r", "")
+                              .strip()).split('.')
+
+            # Append all version numbers to the version list as integers
+            for i in version_str:
+                version.append(int(i))
+
+            return version
+
+        except Exception as err:
+            # Exit if we weren't able to parse the response
+            print("Unable to parse response from Stealthwatch.")
+            exit()
 
     def __selection_list(self, item_name, item_name_key, item_dict):
         """This is a function to allow users to select an item from a dict."""
