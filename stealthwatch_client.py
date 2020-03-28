@@ -1,18 +1,13 @@
 #!/usr/bin/env python
-#  -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
+"""
+This is an API client for Cisco Stealthwatch Enterprise.
 
-#####################
-# ABOUT THIS SCRIPT #
-#####################
-#
-# stealthwatch_client.py
-# ----------------
-# Author: Alan Nix
-# Property of: Cisco Systems
-# Version: 1.1
-# Release Date: 03/25/2020
-#
-############################################################
+stealthwatch_client.py
+----------------
+Author: Alan Nix
+Property of: Cisco Systems
+"""
 
 import json
 
@@ -20,29 +15,38 @@ import requests
 
 from requests.packages import urllib3
 
+try:
+    urllib3.disable_warnings()
+except Exception as err:
+    pass
+
 
 class StealthwatchClient:
-    """A class to allow easy interaction with Stealthwatch."""
+    """This is an API client for Cisco Stealthwatch Enterprise."""
 
-    __debug = False
     __session = None
     __smc_address = None
     __smc_username = None
     __smc_password = None
     __tenant_id = None
+    __validate_certs = None
     __version = None
 
-    def __init__(self, debug=False, *args, **kwargs):
+    __debug = False
+
+    def __init__(self, debug=False, validate_certs=True, *args, **kwargs):
         """Initialize the Stealthwatch Client object."""
 
-        self.__debug = debug
         if self.__session is not None:
             self.__session.close()
         self.__smc_address = None
         self.__smc_username = None
         self.__smc_password = None
         self.__tenant_id = None
+        self.__validate_certs = validate_certs
         self.__version = None
+
+        self.__debug = debug
 
     def login(self, smc_address, smc_username, smc_password):
         """Log in to the Stealthwatch instance."""
@@ -76,7 +80,7 @@ class StealthwatchClient:
         url = 'https://{}/token'.format(self.__smc_address)
 
         # Send a DELETE request to the SMC
-        self.__session.delete(url, verify=False)
+        self.__session.delete(url, verify=self.__validate_certs)
 
         # End the requests session
         if self.__session is not None:
@@ -98,27 +102,10 @@ class StealthwatchClient:
             "password": self.__smc_password
         }
 
-        if self.__debug:
-            print("Stealthwatch Authentication URL: {}".format(url))
+        # Post authentication to Stealthwatch
+        response = self._post_request(url, data=login_credentials)
 
-        try:
-            # Make an authentication request to the SMC
-            response = self.__session.post(url, data=login_credentials, verify=False)
-
-            # If the request was successful, then proceed
-            if response.status_code == 200:
-                if self.__debug:
-                    print("Successfully Authenticated.")
-
-                return response.text
-
-            else:
-                print("SMC Connection Failure - HTTP Return Code: {}\nResponse: {}".format(response.status_code, response.text))
-                exit()
-
-        except Exception as err:
-            print("Unable to post to the SMC - Error: {}".format(err))
-            exit()
+        return response.text
 
     def get_tags(self):
         """Get all Tags (Host Groups) from Stealthwatch."""
@@ -131,35 +118,34 @@ class StealthwatchClient:
             "domainId": self.__tenant_id,
         }
 
-        try:
-            if self.__debug:
-                print("Getting Stealthwatch Tags...")
+        if self.__debug:
+            print("Getting Stealthwatch Tags...")
 
-            # Send the create request
-            response = self.__session.get(url, json=data, verify=False)
+        # Get Tag data from Stealthwatch
+        response = self._get_request(url, json=data)
 
-            # If the request was successful, then proceed, otherwise terminate.
-            if response.status_code == 200:
-                if self.__debug:
-                    print("Tag Request Successful.")
+        return response.json()
+    
+    def get_tag(self, tag_id):
+        """Get a Tag (Host Group) from Stealthwatch"""
 
-                # Parse the response as JSON
-                tag_data = response.json()
+        if self.__debug:
+            print("Getting Stealthwatch Tag...")
 
-                # Return the Tag ID
-                return tag_data
+        # Build the URL to create a Tag
+        url = "https://{}/smc-configuration/rest/v1/tenants/{}/tags/{}".format(self.__smc_address, self.__tenant_id, tag_id)
 
-            else:
-                print("SMC Connection Failure - HTTP Return Code: {}\nResponse: {}".format(response.status_code, response.text))
-                exit()
+        # Post Tag data to Stealthwatch
+        response = self._get_request(url)
 
-        except Exception as err:
-            print("Unable to get from the SMC - Error: {}".format(err))
-            exit()
+        return response.json()
 
     def create_tag(self, parent_tag_id, tag_name, ip_list=[], host_baselines=False,
                    suppress_excluded_services=True, inverse_suppression=False, host_trap=False, send_to_cta=False):
         """Create a new Tag (Host Group) in Stealthwatch."""
+
+        if self.__debug:
+            print("Creating Stealthwatch Tag...")
 
         # Build the URL to create a Tag
         url = "https://{}/smc-configuration/rest/v1/tenants/{}/tags/".format(self.__smc_address, self.__tenant_id)
@@ -176,37 +162,19 @@ class StealthwatchClient:
             "parentId": parent_tag_id
         }]
 
-        try:
-            if self.__debug:
-                print("Creating Stealthwatch Tag...")
+        # Post Tag data to Stealthwatch
+        response = self._post_request(url, json=data)
 
-            # Send the create request
-            response = self.__session.post(url, json=data, verify=False)
-
-            # If the request was successful, then proceed, otherwise terminate.
-            if response.status_code == 200:
-                if self.__debug:
-                    print("Tag Request Successful.")
-
-                # Parse the response as JSON
-                tag_id = response.json()["data"][0]["id"]
-
-                # Return the Tag ID
-                return tag_id
-
-            else:
-                print("SMC Connection Failure - HTTP Return Code: {}\nResponse: {}".format(response.status_code, response.text))
-                exit()
-
-        except Exception as err:
-            print("Unable to post to the SMC - Error: {}".format(err))
-            exit()
+        return response.json()
 
     def update_tag(self, parent_tag_id, tag_id, tag_name, ip_list=[], host_baselines=False,
                    suppress_excluded_services=True, inverse_suppression=False, host_trap=False, send_to_cta=False):
         """Update a Tag (Host Group) in Stealthwatch."""
 
-        # Build the URL to create a Tag
+        if self.__debug:
+            print("Updating Stealthwatch Tag...")
+
+        # Build the URL to update a Tag
         url = "https://{}/smc-configuration/rest/v1/tenants/{}/tags/".format(self.__smc_address, self.__tenant_id)
 
         data = [{
@@ -222,31 +190,10 @@ class StealthwatchClient:
             "parentId": parent_tag_id
         }]
 
-        try:
-            if self.__debug:
-                print("Updating Stealthwatch Tag...")
+        # Post Tag update to Stealthwatch
+        response = self._put_request(url, json=data)
 
-            # Send the update request
-            response = self.__session.put(url, json=data, verify=False)
-
-            # If the request was successful, then proceed, otherwise terminate.
-            if response.status_code == 200:
-                if self.__debug:
-                    print("Tag Request Successful.")
-
-                # Parse the response as JSON
-                tag_id = response.json()["data"][0]["id"]
-
-                # Return the Tag ID
-                return tag_id
-
-            else:
-                print("SMC Connection Failure - HTTP Return Code: {}\nResponse: {}".format(response.status_code, response.text))
-                exit()
-
-        except Exception as err:
-            print("Unable to post to the SMC - Error: {}".format(err))
-            exit()
+        return response.json()
 
     def get_tenant_id(self):
         """Gets the current Tenant ID being used by the object."""
@@ -265,37 +212,21 @@ class StealthwatchClient:
         # The URL to get tenants
         url = "https://{}/sw-reporting/v1/tenants/".format(self.__smc_address)
 
-        if self.__debug:
-            print("Stealthwatch Tenant URL: {}".format(url))
+        response = self._get_request(url)
 
-        try:
-            # Get the tenants from Stealthwatch
-            response = self.__session.get(url, verify=False)
+        # Parse the response as JSON
+        tenants = response.json()["data"]
 
-            # If the request was successful, then proceed, otherwise terminate.
-            if response.status_code == 200:
+        # Set the Domain ID if theres only one, or prompt the user if there are multiple
+        if len(tenants) == 1:
+            selected_tenant_id = tenants[0]["id"]
+        else:
+            selected_item = self.__selection_list("Tenants", "displayName", tenants)
+            selected_tenant_id = selected_item["id"]
 
-                # Parse the response as JSON
-                tenants = response.json()["data"]
+        self.set_tenant_id(selected_tenant_id)
 
-                # Set the Domain ID if theres only one, or prompt the user if there are multiple
-                if len(tenants) == 1:
-                    selected_tenant_id = tenants[0]["id"]
-                else:
-                    selected_item = self.__selection_list("Tenants", "displayName", tenants)
-                    selected_tenant_id = selected_item["id"]
-
-                self.__tenant_id = selected_tenant_id
-
-                return selected_tenant_id
-
-            else:
-                print("SMC Connection Failure - HTTP Return Code: {}\nResponse: {}".format(response.status_code, response.text))
-                exit()
-
-        except Exception as err:
-            print("Unable to post to the SMC - Error: {}".format(err))
-            exit()
+        return selected_tenant_id
 
     def get_version(self):
         """Gets the version of the Stealthwatch instance."""
@@ -303,35 +234,33 @@ class StealthwatchClient:
         # Set up a version list
         version = []
 
+        response = self._get_request("https://{}/cm/monitor/appliances/status".format(self.__smc_address))
+
         try:
-            # Get the version from the SW API
-            response = self.__session.get("https://{}/cm/monitor/appliances/status".format(self.__smc_address), verify=False)
+            # Iterate through all the appliances
+            for appliance in response.json():
 
-            # If the request was successful, then proceed, otherwise terminate.
-            if response.status_code == 200:
+                # If we found the referenced SMC
+                if appliance["applianceType"] == "SMC":
 
-                # Iterate through all the appliances
-                for appliance in response.json():
+                    # Split the version string
+                    version_str = appliance["version"].split(".")
 
-                    # If we found the referenced SMC
-                    if appliance["applianceType"] == "SMC":
+                    # Convert strings to integers
+                    for i in version_str:
+                        version.append(int(i))
 
-                        # Split the version string
-                        version_str = appliance["version"].split(".")
-
-                        # Convert strings to integers
-                        for i in version_str:
-                            version.append(int(i))
-
-                        return version
+                    return version
 
         except Exception as err:
             print("Unable to get Appliance Status from the SMC, falling back to login page parsing...\nError: {}".format(err))
 
-        try:
-            # Get the Stealthwatch login page
-            response = self.__session.get("https://{}/smc/login.html".format(self.__smc_address), verify=False)
+        # The following block of code is just a fall-back for older versions of Stealthwatch
 
+        # Get the Stealthwatch login page
+        response = self._get_request("https://{}/smc/login.html".format(self.__smc_address))
+
+        try:
             # Parse the version number out of the response
             version_str = str(response.text.split('<div id="loginMessage">')[1]
                               .replace('<br />', '<br/>')
@@ -351,6 +280,94 @@ class StealthwatchClient:
         except Exception as err:
             # Exit if we weren't able to parse the response
             print("Unable to parse response from Stealthwatch.")
+            exit()
+
+    def _get_request(self, url, json=None):
+        """Performs an HTTP GET request."""
+
+        if self.__debug:
+            print("Get URL: {}".format(url))
+
+        try:
+            # Make a GET request to the SMC
+            if json:
+                response = self.__session.get(url, json=json, verify=self.__validate_certs)
+            else:
+                response = self.__session.get(url, verify=self.__validate_certs)
+
+            # If the request was successful, then proceed
+            if response.status_code >= 200 and response.status_code < 300:
+                if self.__debug:
+                    print("Stealthwatch Returned Response: {}\n".format(response.text))
+
+                return response
+
+            else:
+                print("SMC Connection Failure!\nHTTP Return Code: {}\nResponse: {}".format(response.status_code, response.text))
+                exit()
+
+        except Exception as err:
+            print("Unable to GET from the SMC!\nError: {}".format(err))
+            exit()
+
+    def _post_request(self, url, data=None, json=None):
+        """Performs an HTTP POST request."""
+
+        if self.__debug:
+            print("Post URL: {}".format(url))
+
+        try:
+            # Make a POST request to the SMC
+            if data:
+                response = self.__session.post(url, data=data, verify=self.__validate_certs)
+            elif json:
+                response = self.__session.post(url, json=json, verify=self.__validate_certs)
+            else:
+                response = self.__session.post(url, verify=self.__validate_certs)
+
+            # If the request was successful, then proceed
+            if response.status_code >= 200 and response.status_code < 300:
+                if self.__debug:
+                    print("Stealthwatch Returned Response: {}\n".format(response.text))
+
+                return response
+
+            else:
+                print("SMC Connection Failure!\nHTTP Return Code: {}\nResponse: {}".format(response.status_code, response.text))
+                exit()
+
+        except Exception as err:
+            print("Unable to POST from the SMC!\nError: {}".format(err))
+            exit()
+
+    def _put_request(self, url, data=None, json=None):
+        """Performs an HTTP POST request."""
+
+        if self.__debug:
+            print("Put URL: {}".format(url))
+
+        try:
+            # Make a PUT request to the SMC
+            if data:
+                response = self.__session.put(url, data=data, verify=self.__validate_certs)
+            elif json:
+                response = self.__session.put(url, json=json, verify=self.__validate_certs)
+            else:
+                response = self.__session.put(url, verify=self.__validate_certs)
+
+            # If the request was successful, then proceed
+            if response.status_code >= 200 and response.status_code < 300:
+                if self.__debug:
+                    print("Stealthwatch Returned Response: {}\n".format(response.text))
+
+                return response
+
+            else:
+                print("SMC Connection Failure!\nHTTP Return Code: {}\nResponse: {}".format(response.status_code, response.text))
+                exit()
+
+        except Exception as err:
+            print("Unable to POST from the SMC!\nError: {}".format(err))
             exit()
 
     def __selection_list(self, item_name, item_name_key, item_dict):

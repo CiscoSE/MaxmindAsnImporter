@@ -1,18 +1,14 @@
 #!/usr/bin/env python
 #  -*- coding: utf-8 -*-
+"""
+This is a script to import MaxMind's ASN to IP range mappings into Tags (Host Groups)
+within Stealthwatch Enterprise.
 
-#####################
-# ABOUT THIS SCRIPT #
-#####################
-#
-# maxmind_asn_importer.py
-# ----------------
-# Author: Alan Nix
-# Property of: Cisco Systems
-# Version: 1.0
-# Release Date: 01/22/2019
-#
-############################################################
+maxmind_asn_importer.py
+----------------
+Author: Alan Nix
+Property of: Cisco Systems
+"""
 
 import argparse
 import csv
@@ -26,11 +22,6 @@ import zipfile
 import requests
 
 from stealthwatch_client import StealthwatchClient
-from requests.packages import urllib3
-from requests.auth import HTTPBasicAuth
-
-# If receiving SSL Certificate Errors, un-comment the line below
-urllib3.disable_warnings()
 
 # Config Paramters
 CONFIG_FILE = "config.json"
@@ -229,7 +220,7 @@ def main():
     if current_version != CONFIG_DATA["LAST_VERSION_IMPORTED"]:
 
         # Instantiate a new StealthwatchClient
-        stealthwatch = StealthwatchClient()
+        stealthwatch = StealthwatchClient(validate_certs=False)
 
         # Login to Stealthwatch
         stealthwatch.login(CONFIG_DATA["SW_ADDRESS"], CONFIG_DATA["SW_USERNAME"], CONFIG_DATA["SW_PASSWORD"])
@@ -237,10 +228,8 @@ def main():
         # If a Domain ID wasn't specified, then get one
         if not CONFIG_DATA["SW_TENANT_ID"]:
 
-            # Get Tenants from REST API
+            # Get Tenants from REST API, and save it
             CONFIG_DATA["SW_TENANT_ID"] = stealthwatch.get_tenants()
-
-            # Save the Tenant/Domain ID
             save_config()
 
         else:
@@ -252,9 +241,10 @@ def main():
         if not CONFIG_DATA["SW_PARENT_TAG"]:
 
             # Create the Tag
-            CONFIG_DATA["SW_PARENT_TAG"] = stealthwatch.create_tag(0, "MaxMind Data")
+            response = stealthwatch.create_tag(0, "MaxMind Data")
 
             # Save the parent Tag/Host Group ID
+            CONFIG_DATA["SW_PARENT_TAG"] = response["data"][0]["id"]
             save_config()
 
         # Get the latest ASN data from MaxMind
@@ -279,8 +269,19 @@ def main():
             # If the Tag name is found, update the tag_id placeholder
             for current_tag in current_tags["data"]:
                 if current_tag["name"] == org["name"]:
-                    tag_id = current_tag["id"]
-                    break
+                    
+                    # Get the found Tag
+                    response = stealthwatch.get_tag(current_tag["id"])
+
+                    # Get the parent of the found tag
+                    parent_tag = response["data"]["parentId"]
+
+                    # If the parent is the one we want
+                    if parent_tag is CONFIG_DATA["SW_PARENT_TAG"]:
+
+                        # Use the tag ID to update
+                        tag_id = current_tag["id"]
+                        break
 
             if tag_id:
 
