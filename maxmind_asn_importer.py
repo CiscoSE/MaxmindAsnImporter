@@ -134,13 +134,18 @@ def search_maxmind_data():
     file_list = []
 
     # Unzip the file from MaxMind
-    with zipfile.ZipFile(ZIP_FILE_NAME, "r") as z:
-        file_names = z.namelist()
+    try:
+        with zipfile.ZipFile(ZIP_FILE_NAME, "r") as z:
+            file_names = z.namelist()
 
-        for file_name in file_names:
-            if '.csv' in file_name:
-                file_list.append(file_name)
-                z.extract(file_name, "temp_csv")
+            for file_name in file_names:
+                if '.csv' in file_name:
+                    file_list.append(file_name)
+                    z.extract(file_name, "temp_csv")
+
+    except Exception as err:
+        print("Failed to unzip the file downloaded from MaxMind.  Check the file and MaxMind API key.")
+        exit(1)
 
     return_data = []
 
