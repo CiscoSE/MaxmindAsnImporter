@@ -47,6 +47,8 @@ The ***config.json*** file contains the following variables:
 
 The script will automatically try to determine your Stealthwatch Tenant ID, and store that in the ***config.json*** file as well.
 
+If you would like to specify a different configuration file to use, other than ***config.json***, you can use the -f or --file command line flags to do so.
+
 ## MaxMind API Credentials
 
 1. Log in to your MaxMind account, or create a new one using the following link: https://www.maxmind.com/en/geolite2/signup

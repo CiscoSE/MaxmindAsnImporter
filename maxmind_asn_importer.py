@@ -321,8 +321,13 @@ if __name__ == "__main__":
 
     # Set up an argument parser
     parser = argparse.ArgumentParser(description="A script to import MaxMind ASN data into Stealthwatch")
+    parser.add_argument("-f", "--file", help="Configuration file to use (Default: config.json)" )
     parser.add_argument("-d", "--daemon", help="Run the script as a daemon", action="store_true")
     args = parser.parse_args()
+
+    # If a different config file is specified, use it
+    if args.file:
+        CONFIG_FILE = args.file
 
     # Load configuration data from file
     CONFIG_DATA = load_config()
