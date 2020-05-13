@@ -282,7 +282,7 @@ def main():
                     parent_tag = response["data"]["parentId"]
 
                     # If the parent is the one we want
-                    if parent_tag is CONFIG_DATA["SW_PARENT_TAG"]:
+                    if parent_tag is int(CONFIG_DATA["SW_PARENT_TAG"]):
 
                         # Use the tag ID to update
                         tag_id = current_tag["id"]
