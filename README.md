@@ -68,3 +68,16 @@ Once the ***config.json*** file is populated, run the following command to build
 You can then run the container as a daemon with the following command:
 
 - ```docker run -d --name maxmind-asn-importer maxmind-asn-importer```
+
+## Issues
+
+### ID and HGs
+
+Script fails when it finds an IP in the inside host (rightfully so). But once
+we fix it, we have to delete the existing host groups created so far (under
+MaxMind Data) or the script fails again. Is it possible to add a check to
+ignore the already created host groups under the same ID (for Maxmind Data)?
+
+### Relative Paths
+
+Script only works when executed from script path.
