@@ -18,13 +18,13 @@ import os
 import shutil
 import time
 import zipfile
-
 import requests
 
 from stealthwatch_client import StealthwatchClient
 
-# Config Paramters
-CONFIG_FILE = "config.json"
+# Config Parameters
+CONFIG_FILE = os.path.join(os.path.dirname(__file__), 'config.json')
+CONFIG_FILE_EXAMPLE = os.path.join(os.path.dirname(__file__), 'config.example.json')
 CONFIG_DATA = {}
 
 ZIP_FILE_NAME = "maxmind_data.zip"
@@ -60,7 +60,7 @@ def load_config(retry=False):
 
             # Print that we couldn't find the config file, and attempt to copy the example
             print("The configuration file was not found. Copying 'config.example.json' file to '{}', and retrying...".format(CONFIG_FILE))
-            shutil.copyfile('config.example.json', CONFIG_FILE)
+            shutil.copyfile(CONFIG_FILE_EXAMPLE, CONFIG_FILE)
 
             # Try to reload the config
             return load_config(retry=True)
@@ -202,7 +202,7 @@ def search_maxmind_data():
 
                                 # Print details about the find
                                 print("Found IP range {} for {} with keyword '{}' in '{}'".format(row[0], org, keyword, row[2]))
-        
+
         # Append the org data to the return data
         return_data.append(org_data)
 
@@ -274,7 +274,7 @@ def main():
             # If the Tag name is found, update the tag_id placeholder
             for current_tag in current_tags["data"]:
                 if current_tag["name"] == org["name"]:
-                    
+
                     # Get the found Tag
                     response = stealthwatch.get_tag(current_tag["id"])
 
